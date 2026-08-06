@@ -186,6 +186,7 @@ input, select, textarea, button{ font-size: 16px; }
   min-height: 42px; min-width: 0;
 }
 .seg-time-row input:focus{ border-color: var(--solv-a); }
+.seg-time-row input[readonly]{ opacity:0.6; background: var(--line-soft); }
 .seg-solv-grid{ display:flex; flex-direction:column; gap: 8px; min-width: 0; }
 .seg-solv-row{ display:grid; grid-template-columns: 44px 1fr 14px 1fr; align-items:center; gap: 6px; min-width: 0; }
 .seg-solv-row .ssr-lbl{ font-family: var(--mono); font-size: 12px; font-weight: 700; display:flex; align-items:center; gap:5px; min-width: 0; overflow: hidden; }
@@ -789,6 +790,49 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
   }
   function activeSolvList(){ return ['A','B','C','D'].filter(s=>state.activeSolv[s]); }
 
+  // ---------- FOCUS PRESERVATION ACROSS RE-RENDERS ----------
+  // Several panels (segments, ingredient rows, batch qty) rebuild their DOM on
+  // every keystroke so derived/read-only fields stay in sync. That rebuild
+  // normally yanks focus out of the input the person is typing in — this pair
+  // of helpers finds the same logical input again after a re-render and
+  // restores focus + cursor position, so typing more than one character works.
+  function selectorForInput(el){
+    if (el.dataset.idx !== undefined && el.dataset.f !== undefined){
+      return `input[data-idx="${el.dataset.idx}"][data-f="${el.dataset.f}"]`;
+    }
+    if (el.dataset.s !== undefined && el.dataset.idx !== undefined && el.dataset.field !== undefined){
+      return `input[data-s="${el.dataset.s}"][data-idx="${el.dataset.idx}"][data-field="${el.dataset.field}"]`;
+    }
+    if (el.dataset.id !== undefined){
+      return `input[data-id="${el.dataset.id}"]`;
+    }
+    if (el.dataset.solv !== undefined){
+      return `input[data-solv="${el.dataset.solv}"]`;
+    }
+    if (el.id){
+      return `#${el.id}`;
+    }
+    return null;
+  }
+  function withFocusPreserved(el, renderFn){
+    const container = el.closest('[id]');
+    const containerId = container ? container.id : null;
+    const selector = selectorForInput(el);
+    let selStart = null, selEnd = null;
+    try { selStart = el.selectionStart; selEnd = el.selectionEnd; } catch(err){ /* some input types don't support selection */ }
+    renderFn();
+    if (selector){
+      const scope = containerId ? document.getElementById(containerId) : document;
+      const again = scope ? scope.querySelector(selector) : null;
+      if (again){
+        again.focus();
+        if (selStart !== null){
+          try { again.setSelectionRange(selStart, selEnd); } catch(err){ /* ignore */ }
+        }
+      }
+    }
+  }
+
   // ---------- RENDER: SOLVENT NAME INPUTS ----------
   function renderSolvNames(){
     const wrap = $('solvNameRow');
@@ -841,11 +885,11 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
       const range = row.querySelector('input');
       const pctEl = row.querySelector('.pct');
       range.addEventListener('input', e=>{
+        const target = e.target;
         state.isoComp[s] = parseFloat(e.target.value);
         pctEl.textContent = state.isoComp[s] + '%';
         normalizeIso(s);
-        renderIsoRows();
-        renderAll();
+        withFocusPreserved(target, ()=>{ renderIsoRows(); renderAll(); });
       });
       wrap.appendChild(row);
     });
@@ -886,8 +930,19 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     state.segments.forEach(seg=>deriveSegmentA(seg, list));
   }
 
+  // ---------- AUTO-CHAIN SEGMENT TIMES ----------
+  // Segment 1's "Dari" stays user-editable (normally 0). Every later segment's
+  // "Dari" is locked to the previous segment's "Ke", so editing "Ke" on one
+  // segment automatically carries into the next segment's start time.
+  function deriveSegmentTimes(){
+    for (let i=1; i<state.segments.length; i++){
+      state.segments[i].from = state.segments[i-1].to;
+    }
+  }
+
   // ---------- RENDER: GRADIENT — stacked cards (mobile-friendly, no horizontal scroll) ----------
   function renderGradTable(){
+    deriveSegmentTimes();
     const list = activeSolvList();
     const aIsEditable = list.length===1 && list[0]==='A'; // only if A is the only active solvent
     if (list.includes('A') && !aIsEditable) deriveAllSegmentsA();
@@ -911,10 +966,11 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
           </div>`;
       });
 
+      const fromReadonly = idx > 0;
       card.innerHTML = `
         <div class="seg-card-head"><span class="seg-idx">SEGMEN ${idx+1}</span></div>
         <div class="seg-time-row">
-          <div class="stf"><label>Dari (min)</label><input type="number" step="0.1" value="${seg.from}" data-idx="${idx}" data-f="from" inputmode="decimal"></div>
+          <div class="stf"><label>Dari (min)${fromReadonly?' <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);">(auto)</span>':''}</label><input type="number" step="0.1" value="${seg.from}" data-idx="${idx}" data-f="from" inputmode="decimal" ${fromReadonly?'readonly tabindex="-1"':''}></div>
           <div class="stf"><label>Ke (min)</label><input type="number" step="0.1" value="${seg.to}" data-idx="${idx}" data-f="to" inputmode="decimal"></div>
         </div>
         <div class="seg-solv-grid">${solvRowsHtml}</div>
@@ -927,10 +983,10 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
       inp.addEventListener('input', e=>{
         const idx = parseInt(e.target.dataset.idx);
         const f = e.target.dataset.f;
+        const target = e.target;
         state.segments[idx][f] = parseFloat(e.target.value)||0;
         if (!aIsEditable && list.includes('A')) deriveSegmentA(state.segments[idx], list);
-        renderGradTable();
-        renderAll();
+        withFocusPreserved(target, ()=>{ renderGradTable(); renderAll(); });
       });
     });
     wrap.querySelectorAll('.seg-del').forEach(btn=>{
@@ -1369,8 +1425,13 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
           const pctInp = document.createElement('input');
           pctInp.type = 'number'; pctInp.min=0; pctInp.max=100; pctInp.step=0.1;
           pctInp.value = ingr.pct; pctInp.inputMode='decimal';
+          pctInp.dataset.s = s; pctInp.dataset.idx = String(idx); pctInp.dataset.field = 'pct';
           pctInp.style.cssText = 'background:var(--panel-2);border:1.5px solid var(--line);padding:10px 6px;border-radius:6px;font-family:var(--mono);font-size:16px;color:var(--text);outline:none;text-align:center;width:100%;min-width:0;min-height:42px;';
-          pctInp.addEventListener('input', e=>{ ingr.pct=parseFloat(e.target.value)||0; renderCompBlocks(); });
+          pctInp.addEventListener('input', e=>{
+            const target = e.target;
+            ingr.pct=parseFloat(e.target.value)||0;
+            withFocusPreserved(target, ()=>{ renderCompBlocks(); });
+          });
           pctInp.addEventListener('focus', e=>{ e.target.style.borderColor='var(--solv-a)'; });
           pctInp.addEventListener('blur', e=>{ e.target.style.borderColor='var(--line)'; });
 
@@ -1542,8 +1603,12 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     wrap.querySelectorAll('input.qty').forEach(inp=>{
       inp.addEventListener('input', e=>{
         const id = e.target.dataset.id;
+        const target = e.target;
         const entry = batch.find(b=>String(b.id)===String(id));
-        if (entry){ entry.batchesPerDay = parseInt(e.target.value)||1; renderBatchList(); }
+        if (entry){
+          entry.batchesPerDay = parseInt(e.target.value)||1;
+          withFocusPreserved(target, ()=>{ renderBatchList(); });
+        }
       });
     });
     wrap.querySelectorAll('[data-del]').forEach(btn=>{
