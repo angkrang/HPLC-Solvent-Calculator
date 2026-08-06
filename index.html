@@ -60,14 +60,14 @@
 }
 
 *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--sans); overscroll-behavior-y: none; overflow-x: hidden; width: 100%; }
+html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--sans); overscroll-behavior-y: none; width: 100%; }
 body{ -webkit-font-smoothing: antialiased; padding-bottom: var(--sab); }
 input{ color: var(--text); caret-color: var(--solv-a-text); }
 input::placeholder{ color: var(--text-faint); }
 /* All inputs at least 16px to stop Android/iOS WebView auto-zoom-on-focus */
 input, select, textarea, button{ font-size: 16px; }
 
-.app{ max-width: 1320px; margin: 0 auto; padding: calc(14px + var(--sat)) 14px 100px; padding-left: calc(14px + var(--sal)); padding-right: calc(14px + var(--sar)); overflow-x: hidden; }
+.app{ max-width: 1320px; margin: 0 auto; padding: calc(14px + var(--sat)) 14px 100px; padding-left: calc(14px + var(--sal)); padding-right: calc(14px + var(--sar)); }
 @media (min-width: 700px){ .app{ padding: 32px 28px 80px; } }
 
 /* ===== HEADER ===== */
