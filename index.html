@@ -2,11 +2,19 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F4F1EA">
 <title>HPLC Solvent Calculator</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
+/*
+  Font stack intentionally uses system fonts only (no @import / external requests).
+  This app is meant to be wrapped as an Android APK / opened offline in the lab —
+  a Google Fonts @import would silently fail without internet and fall back anyway,
+  so we design the type scale around the system stack directly for reliability.
+*/
 :root{
   --bg: #F4F1EA;
   --panel: #FFFFFF;
@@ -40,18 +48,26 @@
 
   --radius: 10px;
   --radius-sm: 7px;
-  --mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
-  --sans: 'Inter', -apple-system, system-ui, sans-serif;
-  --display: 'Fraunces', Georgia, serif;
+  --mono: 'SF Mono', Roboto Mono, 'IBM Plex Mono', Consolas, monospace;
+  --sans: -apple-system, Roboto, 'Segoe UI', system-ui, sans-serif;
+  --display: Georgia, 'Noto Serif', 'Times New Roman', serif;
+
+  /* safe-area insets for notches / gesture bars on Android */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
 }
 
 *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--sans); }
-body{ -webkit-font-smoothing: antialiased; }
+html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--sans); overscroll-behavior-y: none; }
+body{ -webkit-font-smoothing: antialiased; padding-bottom: var(--sab); }
 input{ color: var(--text); caret-color: var(--solv-a-text); }
 input::placeholder{ color: var(--text-faint); }
+/* All inputs at least 16px to stop Android/iOS WebView auto-zoom-on-focus */
+input, select, textarea, button{ font-size: 16px; }
 
-.app{ max-width: 1320px; margin: 0 auto; padding: 20px 16px 60px; }
+.app{ max-width: 1320px; margin: 0 auto; padding: calc(14px + var(--sat)) 14px 100px; padding-left: calc(14px + var(--sal)); padding-right: calc(14px + var(--sar)); }
 @media (min-width: 700px){ .app{ padding: 32px 28px 80px; } }
 
 /* ===== HEADER ===== */
@@ -69,14 +85,19 @@ input::placeholder{ color: var(--text-faint); }
 .header h1{ font-family: var(--display); font-size: 22px; font-weight: 600; margin: 6px 0 0; letter-spacing: -0.01em; line-height:1.15; }
 .header-sub{ font-size: 12.5px; color: var(--text-dim); margin-top: 6px; max-width: 480px; line-height:1.5; }
 
-.tab-row{ display:flex; gap: 6px; width:100%; }
-@media (min-width: 640px){ .tab-row{ width:auto; } }
+.tab-row{
+  display:flex; gap: 6px; width:100%;
+  position: sticky; top: calc(-1px - var(--sat)); z-index: 20;
+  background: var(--bg); padding: calc(8px + var(--sat)) 0 8px; margin-top: calc(-8px - var(--sat));
+}
+@media (min-width: 640px){ .tab-row{ width:auto; position: static; padding:0; margin:0; } }
 .tab-btn{
-  flex:1; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text-dim);
-  background: var(--panel); border: 1px solid var(--line); padding: 9px 16px;
+  flex:1; font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--text-dim);
+  background: var(--panel); border: 1px solid var(--line); padding: 13px 16px; min-height: 46px;
   border-radius: var(--radius-sm); cursor: pointer; transition: all .15s ease; white-space:nowrap;
 }
 .tab-btn:hover{ color: var(--text); border-color: var(--text-faint); }
+.tab-btn:active{ transform: scale(0.98); }
 .tab-btn.active{ color: #fff; background: var(--solv-a-text); border-color: var(--solv-a-text); }
 
 .view{ display:none; }
@@ -105,8 +126,8 @@ input::placeholder{ color: var(--text-faint); }
 }
 .field input[type=text], .field input[type=number]{
   width:100%; background: var(--panel-2); border: 1.5px solid var(--line); color: var(--text);
-  padding: 11px 11px; border-radius: var(--radius-sm); font-family: var(--mono); font-size: 14.5px;
-  outline: none; transition: border-color .15s ease;
+  padding: 12px 11px; border-radius: var(--radius-sm); font-family: var(--mono); font-size: 16px;
+  outline: none; transition: border-color .15s ease; min-height: 44px;
 }
 .field input:focus{ border-color: var(--solv-a); }
 .field-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -145,32 +166,41 @@ input::placeholder{ color: var(--text-faint); }
 .iso-row input[type=range]{ flex:1; accent-color: var(--solv-a-text); height: 22px; }
 .iso-row .pct{ font-family: var(--mono); font-size: 14px; width: 50px; text-align:right; color: var(--text); font-weight:600; }
 
-/* segments - card based for mobile friendliness */
-.seg-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin: 0 -2px 4px; }
-.seg-table{ width:100%; border-collapse: collapse; min-width: 460px; }
-.seg-table th{
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint);
-  text-align:center; padding: 0 4px 7px; font-weight: 700; white-space:nowrap;
+/* segments — stacked cards, no horizontal scroll on any screen size */
+.seg-card{
+  background: var(--panel-2); border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+  padding: 12px; margin-bottom: 10px;
 }
-.seg-table th:first-child, .seg-table th:nth-child(2){ text-align:left; }
-.seg-table td{ padding: 3px 4px; }
-.seg-table input{
-  width:100%; min-width:0; background: var(--panel-2); border: 1.5px solid var(--line); color: var(--text);
-  padding: 8px 6px; border-radius: 6px; font-family: var(--mono); font-size: 13px; outline:none; text-align:center;
+.seg-card-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.seg-card-head .seg-idx{ font-family: var(--mono); font-size: 12px; font-weight:700; color: var(--text-dim); }
+.seg-time-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.seg-time-row .stf{ display:flex; flex-direction:column; gap: 4px; }
+.seg-time-row label{ font-size: 10.5px; color: var(--text-faint); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+.seg-time-row input{
+  width:100%; background: var(--panel); border: 1.5px solid var(--line); color: var(--text);
+  padding: 10px 8px; border-radius: 6px; font-family: var(--mono); font-size: 16px; outline:none; text-align:left;
+  min-height: 42px;
 }
-.seg-table input:focus{ border-color: var(--solv-a); }
-.seg-table td:first-child input, .seg-table td:nth-child(2) input{ text-align:left; padding-left:8px; }
+.seg-time-row input:focus{ border-color: var(--solv-a); }
+.seg-solv-grid{ display:flex; flex-direction:column; gap: 8px; }
+.seg-solv-row{ display:grid; grid-template-columns: 44px 1fr 14px 1fr; align-items:center; gap: 6px; }
+.seg-solv-row .ssr-lbl{ font-family: var(--mono); font-size: 12px; font-weight: 700; display:flex; align-items:center; gap:5px; }
+.seg-solv-row .ssr-lbl .sw{ width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+.seg-solv-row .ssr-arrow{ color: var(--text-faint); text-align:center; font-size:12px; }
+.seg-solv-row input{
+  width:100%; background: var(--panel); border: 1.5px solid var(--line); color: var(--text);
+  padding: 9px 6px; border-radius: 6px; font-family: var(--mono); font-size: 16px; outline:none; text-align:center;
+  min-height: 42px;
+}
+.seg-solv-row input:focus{ border-color: var(--solv-a); }
+.seg-solv-row input[readonly]{ opacity:0.6; background: var(--line-soft); }
+.seg-card-foot{ display:flex; justify-content:flex-end; margin-top: 10px; }
 .seg-del{
-  background:transparent; border:1.5px solid var(--line); color: var(--text-faint); cursor:pointer; font-size: 15px;
-  padding: 6px 9px; border-radius: 6px; line-height:1;
+  background:transparent; border:1.5px solid var(--line); color: var(--warn); cursor:pointer; font-size: 13px;
+  padding: 8px 14px; border-radius: 6px; font-weight:600; min-height: 40px;
 }
-.seg-del:hover{ color: var(--warn); background: var(--warn-dim); border-color: var(--warn); }
-.seg-table-hint{ font-size:11px; color:var(--text-faint); margin: 2px 2px 10px; }
-.seg-del{
-  background:transparent; border:1.5px solid var(--line); color: var(--text-faint); cursor:pointer; font-size: 12px;
-  padding: 5px 10px; border-radius: 6px; font-weight:600;
-}
-.seg-del:hover{ color: var(--warn); background: var(--warn-dim); border-color: var(--warn); }
+.seg-del:active{ background: var(--warn-dim); border-color: var(--warn); }
+.seg-table-hint{ font-size:11.5px; color:var(--text-faint); margin: 2px 2px 10px; }
 
 .btn{
   font-family: var(--sans); font-size: 13px; font-weight: 700; padding: 10px 16px;
@@ -180,12 +210,20 @@ input::placeholder{ color: var(--text-faint); }
 .btn:hover{ border-color: var(--text-faint); }
 .btn.add{ color: var(--solv-a-text); border-color: var(--solv-a); background: var(--solv-a-dim); width:100%; }
 .btn.add:hover{ opacity:0.85; }
-.btn.primary{ background: var(--solv-a-text); color: #fff; border-color: var(--solv-a-text); width:100%; padding: 13px; font-size: 14.5px; }
+.btn.primary{ background: var(--solv-a-text); color: #fff; border-color: var(--solv-a-text); width:100%; padding: 15px; font-size: 15px; min-height: 50px; }
 .btn.primary:hover{ opacity:0.9; }
+.btn.primary:active{ transform: scale(0.985); }
+@media (max-width: 979px){
+  #addToBatchBtn{
+    position: fixed; left: 14px; right: 14px; bottom: calc(14px + var(--sab));
+    z-index: 30; box-shadow: 0 6px 20px rgba(58,53,44,0.22); max-width: 100%;
+  }
+}
 .btn.ghost{ background:transparent; }
-.btn.small{ font-size: 12px; padding: 7px 12px; }
+.btn.small{ font-size: 12.5px; padding: 9px 14px; min-height: 38px; }
 .btn.danger{ color: var(--warn); border-color: var(--warn); background: var(--warn-dim); }
 .btn.danger:hover{ opacity:0.85; }
+.btn.danger:active, .btn:active{ transform: scale(0.97); }
 
 /* ===== CHART ===== */
 .chart-wrap{ position:relative; background: var(--panel-2); border:1.5px solid var(--line); border-radius: var(--radius-sm); padding: 14px 10px 6px; margin-bottom: 14px;}
@@ -211,9 +249,9 @@ svg.chart{ width:100%; height: 200px; display:block; }
 .chart-probe-row{ display:flex; align-items:center; gap:10px; margin-top:12px; flex-wrap:wrap; }
 .chart-probe-row label{ font-size:12px; color:var(--text-dim); font-weight:600; white-space:nowrap; }
 .chart-probe-row input[type=text]{
-  width:64px; background:#FFFFFF !important; border:1.5px solid var(--line); padding:8px 6px;
-  border-radius:6px; font-family:var(--mono); font-size:14px; outline:none; text-align:center;
-  color:#3A352C !important; font-weight:700; -webkit-text-fill-color:#3A352C;
+  width:68px; background:#FFFFFF !important; border:1.5px solid var(--line); padding:10px 6px;
+  border-radius:6px; font-family:var(--mono); font-size:16px; outline:none; text-align:center;
+  color:#3A352C !important; font-weight:700; -webkit-text-fill-color:#3A352C; min-height:42px;
 }
 .chart-probe-row input[type=text]:focus{ border-color: var(--solv-a); }
 .chart-probe-row input[type=range]{ flex:1; min-width:100px; accent-color: var(--solv-a-text); height:22px; }
@@ -235,17 +273,19 @@ svg.chart{ width:100%; height: 200px; display:block; }
 .rcard.c .val{ color: var(--solv-c-text); }
 .rcard.d .val{ color: var(--solv-d-text); }
 
-.breakdown-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin: 0 -2px; }
-.breakdown-table{ width:100%; border-collapse:collapse; font-size: 12.5px; min-width: 480px; }
-.breakdown-table th{
-  text-align:left; font-size: 10px; text-transform:uppercase; letter-spacing:0.05em; color: var(--text-faint);
-  padding: 8px 10px; border-bottom: 1.5px solid var(--line); font-weight:700; white-space:nowrap;
+/* breakdown — stacked cards, one per solvent, no horizontal scroll */
+.bd-card{
+  background: var(--panel-2); border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+  padding: 13px 14px; margin-bottom: 10px;
 }
-.breakdown-table td{ padding: 10px 10px; border-bottom: 1px solid var(--line-soft); font-family: var(--mono); white-space:nowrap; }
-.breakdown-table tr:last-child td{ border-bottom:none; }
-.breakdown-table .swrow{ display:flex; align-items:center; gap:8px; font-family: var(--sans); font-weight:700;}
-.breakdown-table .swatch{ width:9px; height:9px; border-radius:3px; flex-shrink:0; }
-.breakdown-table .total-row td{ font-weight:700; color:var(--text); border-top: 1.5px solid var(--line); background: var(--panel-2); }
+.bd-card .bd-head{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:13.5px; margin-bottom:10px; }
+.bd-card .bd-head .swatch{ width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.bd-card .bd-rows{ display:grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.bd-card .bd-row .lbl{ font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-faint); font-weight:600; margin-bottom:2px; }
+.bd-card .bd-row .val{ font-family: var(--mono); font-size: 13.5px; color: var(--text); }
+.bd-card.total{ background: var(--solv-a-dim); border-color: var(--solv-a); }
+.bd-card.total .bd-head{ font-size:14.5px; }
+.bd-card.total .bd-total-val{ font-family: var(--mono); font-size: 22px; font-weight:700; color: var(--solv-a-text); }
 
 .note-box{
   font-size: 12.5px; color: var(--text-dim); background: var(--panel-2); border: 1.5px solid var(--line);
@@ -258,7 +298,7 @@ svg.chart{ width:100%; height: 200px; display:block; }
 .cond-row:last-child{ border-bottom:none; }
 .cond-row .swatch{ width:10px; height:10px; border-radius:3px; flex-shrink:0; }
 .cond-row .cname{ flex:1; font-size:13px; font-weight:600; min-width:0; }
-.cond-row input{ width: 80px; background:var(--panel-2); border:1.5px solid var(--line); padding:8px 8px; border-radius:6px; font-family:var(--mono); font-size:13px; text-align:right; outline:none; flex-shrink:0; }
+.cond-row input{ width: 88px; background:var(--panel-2); border:1.5px solid var(--line); padding:10px 8px; border-radius:6px; font-family:var(--mono); font-size:16px; text-align:right; outline:none; flex-shrink:0; min-height:42px; }
 .cond-row .u{ font-size:11.5px; color:var(--text-faint); width:28px; flex-shrink:0; }
 
 /* ===== BATCH PLANNER VIEW ===== */
@@ -276,8 +316,8 @@ svg.chart{ width:100%; height: 200px; display:block; }
 .method-card .mstat .val{ font-family: var(--mono); font-size: 14px; font-weight:700; }
 .method-card .mcard-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid var(--line-soft); }
 .method-card input.qty{
-  width: 70px; background: var(--panel-2); border: 1.5px solid var(--line); color: var(--text);
-  padding: 8px 8px; border-radius: 6px; font-family: var(--mono); font-size: 13.5px; text-align:center; outline:none;
+  width: 74px; background: var(--panel-2); border: 1.5px solid var(--line); color: var(--text);
+  padding: 10px 8px; border-radius: 6px; font-family: var(--mono); font-size: 16px; text-align:center; outline:none; min-height:42px;
 }
 .qty-wrap{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim); font-weight:600; }
 .empty-state{
@@ -303,11 +343,16 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
 /* ===== PRINT BUTTON ===== */
 .print-btn{
   display: flex; align-items: center; white-space: nowrap;
-  font-size: 13px; font-weight: 700; padding: 10px 16px;
+  font-size: 13px; font-weight: 700; padding: 10px 16px; min-height: 42px;
   color: var(--solv-a-text); border-color: var(--solv-a); background: var(--solv-a-dim);
   align-self: flex-start; margin-top: 4px;
 }
 .print-btn:hover{ opacity: 0.85; }
+@media (max-width: 520px){
+  .print-btn .pbtn-label{ display:none; }
+  .print-btn{ padding: 10px 12px; }
+  .print-btn svg{ margin-right: 0 !important; }
+}
 
 /* ===== PRINT STYLES ===== */
 @media print {
@@ -386,10 +431,6 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
   .rcard { padding: 10px !important; background: #f7f7f5 !important; border: 1px solid #ddd !important; }
   .rcard .val { font-size: 16px !important; }
 
-  /* breakdown table */
-  .breakdown-table th, .breakdown-table td { font-size: 11.5px !important; padding: 7px 8px !important; }
-  .breakdown-table .total-row td { background: #f0f0ec !important; }
-
   /* note boxes */
   .note-box { font-size: 11px !important; padding: 8px 10px !important; background: #f7f7f5 !important; border-left-color: #888 !important; }
 
@@ -400,9 +441,14 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
   .iso-row input[type=range] { display: none !important; }
   .iso-row { gap: 6px !important; }
 
-  /* segment table */
-  .seg-table th, .seg-table td { font-size: 11px !important; }
-  .seg-table input { border: 1px solid #ddd !important; background: #f7f7f5 !important; font-size: 11px !important; padding: 5px !important; }
+  /* segment cards */
+  .seg-card { border: 1px solid #ddd !important; background: #fafafa !important; break-inside: avoid; padding: 8px !important; }
+  .seg-card input { border: 1px solid #ddd !important; background: #f7f7f5 !important; font-size: 11px !important; padding: 5px !important; min-height: unset !important; }
+  .seg-card-foot { display: none !important; }
+
+  /* breakdown cards */
+  .bd-card { border: 1px solid #ddd !important; background: #fafafa !important; break-inside: avoid; padding: 8px !important; }
+  .bd-card.total { background: #f0f0ec !important; }
 
   /* comp blocks */
   .comp-solvent-block { border: 1px solid #ddd !important; break-inside: avoid; margin-bottom: 8px !important; }
@@ -465,9 +511,9 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
 .comp-ingredient-row:last-child{ border-bottom: none; padding-bottom: 0; }
 .comp-ingredient-row .ci-name{ font-size:13px; color:var(--text-dim); }
 .comp-ingredient-row .ci-pct{
-  font-family:var(--mono); font-size:12px; color:var(--text-faint);
+  font-family:var(--mono); font-size:16px; color:var(--text-faint);
   background:var(--panel-2); border:1.5px solid var(--line); border-radius:5px;
-  padding:5px 9px; width:70px; text-align:right; outline:none;
+  padding:8px 9px; width:76px; text-align:right; outline:none; min-height:40px;
 }
 .comp-ingredient-row .ci-pct:focus{ border-color:var(--solv-a); }
 .comp-ingredient-row .ci-vol{
@@ -476,15 +522,15 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
 }
 .comp-ingredient-row .ci-del{
   background:transparent; border:1.5px solid var(--line); color:var(--text-faint);
-  cursor:pointer; font-size:13px; padding:4px 9px; border-radius:5px; line-height:1;
+  cursor:pointer; font-size:14px; padding:10px 12px; border-radius:5px; line-height:1; min-height:40px; min-width:40px;
 }
 .comp-ingredient-row .ci-del:hover{ color:var(--warn); background:var(--warn-dim); border-color:var(--warn); }
 .comp-ingr-grid{ display:grid; grid-template-columns: 1fr auto auto auto; align-items:center; gap:10px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); }
 .comp-ingr-grid:last-child{ border-bottom:none; padding-bottom:0; }
 .comp-add-row{ display:flex; gap:8px; margin-top:12px; }
 .comp-add-row input{
-  flex:1; background:var(--panel-2); border:1.5px solid var(--line); padding:8px 10px;
-  border-radius:6px; font-family:var(--mono); font-size:13px; color:var(--text); outline:none;
+  flex:1; background:var(--panel-2); border:1.5px solid var(--line); padding:11px 10px;
+  border-radius:6px; font-family:var(--mono); font-size:16px; color:var(--text); outline:none; min-height:44px;
 }
 .comp-add-row input:focus{ border-color:var(--solv-a); }
 .comp-sum-note{
@@ -514,7 +560,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     </div>
     <button class="btn print-btn" id="printBtn" title="Cetak / Simpan sebagai PDF">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="display:inline;vertical-align:-2px;margin-right:6px;"><path d="M3.5 1h8A.5.5 0 0 1 12 1.5V4h1.5A1.5 1.5 0 0 1 15 5.5v5A1.5 1.5 0 0 1 13.5 12H12v1.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5V12H1.5A1.5 1.5 0 0 1 0 10.5v-5A1.5 1.5 0 0 1 1.5 4H3V1.5A.5.5 0 0 1 3.5 1ZM4 4h7V2H4v2Zm-2.5 1A.5.5 0 0 0 1 5.5v5a.5.5 0 0 0 .5.5H3V9.5A.5.5 0 0 1 3.5 9h8a.5.5 0 0 1 .5.5V11h1.5a.5.5 0 0 0 .5-.5v-5a.5.5 0 0 0-.5-.5h-12ZM4 10v3h7v-3H4Z" fill="currentColor"/></svg>
-      Print / PDF
+      <span class="pbtn-label">Print / PDF</span>
     </button>
   </div>
 
@@ -588,18 +634,8 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
 
           <!-- GRADIENT PANEL -->
           <div id="gradPanel" style="display:none;">
-            <div class="seg-table-wrap">
-              <table class="seg-table">
-                <thead>
-                  <tr id="segTableHead">
-                    <th>Dari<br>(min)</th>
-                    <th>Ke<br>(min)</th>
-                  </tr>
-                </thead>
-                <tbody id="segBody"></tbody>
-              </table>
-            </div>
-            <div class="seg-table-hint">Tiap kolom solvent: nilai awal → akhir segmen (%)</div>
+            <div class="seg-table-hint">Tiap segmen: waktu mulai/selesai lalu %awal → %akhir per solvent</div>
+            <div id="segBody"></div>
             <button class="btn add" id="addSegBtn">+ Tambah Segmen</button>
             <div class="note-box" id="gradSumNote" style="margin-top:12px;"></div>
           </div>
@@ -660,15 +696,8 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
 
         <div class="panel">
           <div class="panel-title">Breakdown Kebutuhan Total Method Ini</div>
-          <div class="breakdown-table-wrap">
-            <table class="breakdown-table">
-              <thead>
-                <tr><th>Solvent</th><th>Per Injeksi</th><th>Equil+Wash</th><th>Conditioning</th><th>Total + Margin</th></tr>
-              </thead>
-              <tbody id="breakdownBody"></tbody>
-            </table>
-          </div>
-          <div class="note-box" id="totalNote" style="margin-top:14px;"></div>
+          <div id="breakdownBody"></div>
+          <div class="note-box" id="totalNote" style="margin-top:10px;"></div>
         </div>
 
         <div class="panel">
@@ -723,7 +752,9 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
       { from:0, to:2, A0:90, A1:90, B0:10, B1:10, C0:0,C1:0,D0:0,D1:0 },
       { from:2, to:12, A0:90, A1:30, B0:10, B1:70, C0:0,C1:0,D0:0,D1:0 },
       { from:12, to:15, A0:30, A1:90, B0:70, B1:10, C0:0,C1:0,D0:0,D1:0 }
-    ]
+    ],
+    // plain form fields, kept here too so a reload restores them exactly
+    fields: { methodName:'Method 1', flowRate:'1.0', runTime:'15', equilTime:'5', washTime:'0', numInjections:'20', safetyMargin:'15' }
   };
 
   // solvComp[s] = array of { name: string, pct: number }
@@ -732,6 +763,15 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
   let compOpen = { A:true, B:true, C:true, D:true };
 
   let batch = [];
+
+  // NOTE ON PERSISTENCE: this preview keeps everything in memory only (state
+  // resets on reload), because browser storage APIs are unreliable inside
+  // Claude's in-chat artifact preview. When you take this file out of Claude
+  // (open it directly, or wrap it as an Android APK), add real persistence —
+  // see the saveToStorage()/loadFromStorage() stub functions below, which are
+  // safe no-ops here and ready to fill in with localStorage in your own build.
+  function saveToStorage(){ /* no-op in the Claude preview — see note above */ }
+  function loadFromStorage(){ /* no-op in the Claude preview — see note above */ return false; }
 
   // ---------- HELPERS ----------
   function $(id){ return document.getElementById(id); }
@@ -838,39 +878,41 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     state.segments.forEach(seg=>deriveSegmentA(seg, list));
   }
 
-  // ---------- RENDER: GRADIENT — compact table layout ----------
+  // ---------- RENDER: GRADIENT — stacked cards (mobile-friendly, no horizontal scroll) ----------
   function renderGradTable(){
     const list = activeSolvList();
     const aIsEditable = list.length===1 && list[0]==='A'; // only if A is the only active solvent
     if (list.includes('A') && !aIsEditable) deriveAllSegmentsA();
 
-    // build header row dynamically based on active solvents
-    const head = $('segTableHead');
-    head.innerHTML = `<th>Dari<br>(min)</th><th>Ke<br>(min)</th>` +
-      list.map(s=>{
-        const readonly = (s==='A' && !aIsEditable);
-        return `<th><span style="color:${SOLV_COLORS[s]}">●</span> %${s}${readonly?' <span style="font-weight:400;text-transform:none;">(auto)</span>':''}</th>`;
-      }).join('') +
-      `<th></th>`;
-
     const wrap = $('segBody');
     wrap.innerHTML = '';
+
     state.segments.forEach((seg, idx)=>{
-      const tr = document.createElement('tr');
-      let cells = `
-        <td><input type="number" step="0.1" value="${seg.from}" data-idx="${idx}" data-f="from" inputmode="decimal"></td>
-        <td><input type="number" step="0.1" value="${seg.to}" data-idx="${idx}" data-f="to" inputmode="decimal"></td>
-      `;
+      const card = document.createElement('div');
+      card.className = 'seg-card';
+
+      let solvRowsHtml = '';
       list.forEach(s=>{
         const readonly = (s==='A' && !aIsEditable);
-        cells += `<td style="display:flex;gap:3px;">
-          <input type="number" step="1" min="0" max="100" value="${seg[s+'0']}" data-idx="${idx}" data-f="${s}0" title="awal segmen" inputmode="numeric" ${readonly?'readonly tabindex="-1" style="opacity:0.65;background:var(--line-soft);"':''}>
-          <input type="number" step="1" min="0" max="100" value="${seg[s+'1']}" data-idx="${idx}" data-f="${s}1" title="akhir segmen" inputmode="numeric" ${readonly?'readonly tabindex="-1" style="opacity:0.65;background:var(--line-soft);"':''}>
-        </td>`;
+        solvRowsHtml += `
+          <div class="seg-solv-row">
+            <div class="ssr-lbl"><span class="sw" style="background:${SOLV_COLORS[s]}"></span>%${s}${readonly?' <span style="font-weight:400;color:var(--text-faint);font-size:10px;">(auto)</span>':''}</div>
+            <input type="number" step="1" min="0" max="100" value="${seg[s+'0']}" data-idx="${idx}" data-f="${s}0" title="awal segmen" inputmode="numeric" ${readonly?'readonly tabindex="-1"':''}>
+            <span class="ssr-arrow">→</span>
+            <input type="number" step="1" min="0" max="100" value="${seg[s+'1']}" data-idx="${idx}" data-f="${s}1" title="akhir segmen" inputmode="numeric" ${readonly?'readonly tabindex="-1"':''}>
+          </div>`;
       });
-      cells += `<td><button class="seg-del" data-idx="${idx}">✕</button></td>`;
-      tr.innerHTML = cells;
-      wrap.appendChild(tr);
+
+      card.innerHTML = `
+        <div class="seg-card-head"><span class="seg-idx">SEGMEN ${idx+1}</span></div>
+        <div class="seg-time-row">
+          <div class="stf"><label>Dari (min)</label><input type="number" step="0.1" value="${seg.from}" data-idx="${idx}" data-f="from" inputmode="decimal"></div>
+          <div class="stf"><label>Ke (min)</label><input type="number" step="0.1" value="${seg.to}" data-idx="${idx}" data-f="to" inputmode="decimal"></div>
+        </div>
+        <div class="seg-solv-grid">${solvRowsHtml}</div>
+        <div class="seg-card-foot"><button class="seg-del" data-idx="${idx}">✕ Hapus Segmen</button></div>
+      `;
+      wrap.appendChild(card);
     });
 
     wrap.querySelectorAll('input:not([readonly])').forEach(inp=>{
@@ -887,6 +929,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
       btn.addEventListener('click', e=>{
         const idx = parseInt(e.target.dataset.idx);
         state.segments.splice(idx,1);
+        if (navigator.vibrate) navigator.vibrate(10);
         renderGradTable();
         renderAll();
       });
@@ -1070,6 +1113,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     }
     function move(e){
       if (!dragging) return;
+      if (e.cancelable) e.preventDefault(); // stop page scroll while dragging the probe
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       setProbeTime(clientXToTime(clientX));
     }
@@ -1078,9 +1122,12 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     wrap.addEventListener('mousedown', start);
     wrap.addEventListener('mousemove', move);
     window.addEventListener('mouseup', end);
-    wrap.addEventListener('touchstart', start, {passive:true});
-    wrap.addEventListener('touchmove', move, {passive:true});
+    // touch-action:none (in CSS) plus passive:false lets us preventDefault reliably,
+    // so a finger dragging across the chart moves the probe instead of scrolling the page
+    wrap.addEventListener('touchstart', start, {passive:false});
+    wrap.addEventListener('touchmove', move, {passive:false});
     wrap.addEventListener('touchend', end);
+    wrap.addEventListener('touchcancel', end);
 
     $('probeSlider').addEventListener('input', e=>{
       setProbeTime(parseFloat(e.target.value)||0);
@@ -1187,23 +1234,28 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     let grandTotalMargin = 0;
     r.list.forEach(s=>{
       grandTotalMargin += r.totalPerSolventWithMargin[s];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><div class="swrow"><div class="swatch" style="background:${SOLV_COLORS[s]}"></div>${state.solvNames[s]}</div></td>
-        <td>${fmt(r.perInj[s],2)} × ${r.numInj}</td>
-        <td>${fmt(r.perEquilWash[s],1)} mL</td>
-        <td>${fmt(r.condWash[s],0)} mL</td>
-        <td><b>${fmt(r.totalPerSolventWithMargin[s],1)} mL</b></td>
+      const card = document.createElement('div');
+      card.className = 'bd-card';
+      card.innerHTML = `
+        <div class="bd-head"><span class="swatch" style="background:${SOLV_COLORS[s]}"></span>${state.solvNames[s]}
+          <span style="margin-left:auto;font-family:var(--mono);font-weight:700;">${fmt(r.totalPerSolventWithMargin[s],1)} mL</span>
+        </div>
+        <div class="bd-rows">
+          <div class="bd-row"><div class="lbl">Per Injeksi × Jumlah</div><div class="val">${fmt(r.perInj[s],2)} × ${r.numInj}</div></div>
+          <div class="bd-row"><div class="lbl">Equil + Wash</div><div class="val">${fmt(r.perEquilWash[s],1)} mL</div></div>
+          <div class="bd-row"><div class="lbl">Conditioning</div><div class="val">${fmt(r.condWash[s],0)} mL</div></div>
+          <div class="bd-row"><div class="lbl">Total + Margin</div><div class="val"><b>${fmt(r.totalPerSolventWithMargin[s],1)} mL</b></div></div>
+        </div>
       `;
-      body.appendChild(tr);
+      body.appendChild(card);
     });
-    const totalRow = document.createElement('tr');
-    totalRow.className = 'total-row';
-    totalRow.innerHTML = `
-      <td>TOTAL SEMUA SOLVENT</td><td></td><td></td><td></td>
-      <td>${fmt(grandTotalMargin,1)} mL</td>
+    const bdTotalCard = document.createElement('div');
+    bdTotalCard.className = 'bd-card total';
+    bdTotalCard.innerHTML = `
+      <div class="bd-head">TOTAL SEMUA SOLVENT</div>
+      <div class="bd-total-val">${fmt(grandTotalMargin,1)} mL</div>
     `;
-    body.appendChild(totalRow);
+    body.appendChild(bdTotalCard);
 
     $('totalNote').innerHTML = `
       Estimasi total durasi method: <b>${fmt(r.totalRunMinutes,1)} menit</b> (≈ ${fmt(r.totalRunMinutes/60,2)} jam) untuk ${r.numInj} injeksi.
@@ -1299,7 +1351,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
           row.style.cssText = 'display:grid;grid-template-columns:1fr 72px 100px 32px;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-soft);';
 
           const nameInp = document.createElement('input');
-          nameInp.style.cssText = 'background:var(--panel-2);border:1.5px solid var(--line);padding:7px 9px;border-radius:6px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;width:100%;min-width:0;';
+          nameInp.style.cssText = 'background:var(--panel-2);border:1.5px solid var(--line);padding:10px 9px;border-radius:6px;font-family:var(--mono);font-size:16px;color:var(--text);outline:none;width:100%;min-width:0;min-height:42px;';
           nameInp.placeholder = 'nama bahan';
           nameInp.value = ingr.name;
           nameInp.addEventListener('input', e=>{ ingr.name=e.target.value; });
@@ -1309,7 +1361,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
           const pctInp = document.createElement('input');
           pctInp.type = 'number'; pctInp.min=0; pctInp.max=100; pctInp.step=0.1;
           pctInp.value = ingr.pct; pctInp.inputMode='decimal';
-          pctInp.style.cssText = 'background:var(--panel-2);border:1.5px solid var(--line);padding:7px 6px;border-radius:6px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;text-align:center;width:100%;min-width:0;';
+          pctInp.style.cssText = 'background:var(--panel-2);border:1.5px solid var(--line);padding:10px 6px;border-radius:6px;font-family:var(--mono);font-size:16px;color:var(--text);outline:none;text-align:center;width:100%;min-width:0;min-height:42px;';
           pctInp.addEventListener('input', e=>{ ingr.pct=parseFloat(e.target.value)||0; renderCompBlocks(); });
           pctInp.addEventListener('focus', e=>{ e.target.style.borderColor='var(--solv-a)'; });
           pctInp.addEventListener('blur', e=>{ e.target.style.borderColor='var(--line)'; });
@@ -1376,6 +1428,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     if (state.mode==='iso') renderIsoSumNote(); else renderGradSumNote();
     renderResults();
     renderCompBlocks();
+    saveToStorage();
   }
 
   // ---------- MODE TOGGLE ----------
@@ -1411,8 +1464,9 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
 
   // ---------- INPUT LISTENERS ----------
   ['flowRate','runTime','equilTime','washTime','numInjections','safetyMargin'].forEach(id=>{
-    $(id).addEventListener('input', renderAll);
+    $(id).addEventListener('input', e=>{ state.fields[id]=e.target.value; renderAll(); });
   });
+  $('methodName').addEventListener('input', e=>{ state.fields.methodName = e.target.value; saveToStorage(); });
 
   $('addSegBtn').addEventListener('click', addSegment);
 
@@ -1493,6 +1547,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     });
 
     renderBatchSummary();
+    saveToStorage();
   }
 
   function renderBatchSummary(){
@@ -1573,6 +1628,30 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
   });
 
   // ---------- INIT ----------
+  loadFromStorage();
+
+  // rehydrate plain form fields from restored state
+  if (!state.fields) state.fields = { methodName:'Method 1', flowRate:'1.0', runTime:'15', equilTime:'5', washTime:'0', numInjections:'20', safetyMargin:'15' };
+  Object.keys(state.fields).forEach(id=>{
+    const el = $(id);
+    if (el) el.value = state.fields[id];
+  });
+
+  // rehydrate solvent pill active/inactive state
+  document.querySelectorAll('#solventPills .pill').forEach(pill=>{
+    const s = pill.dataset.solv;
+    pill.dataset.active = state.activeSolv[s] ? '1':'0';
+  });
+
+  // rehydrate elution mode toggle
+  if (state.mode === 'grad'){
+    $('btnModeGrad').classList.add('active'); $('btnModeIso').classList.remove('active');
+    $('isoPanel').style.display='none'; $('gradPanel').style.display='';
+  } else {
+    $('btnModeIso').classList.add('active'); $('btnModeGrad').classList.remove('active');
+    $('isoPanel').style.display=''; $('gradPanel').style.display='none';
+  }
+
   renderSolvNames();
   renderCondRows();
   renderIsoRows();
