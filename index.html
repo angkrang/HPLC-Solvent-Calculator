@@ -856,7 +856,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
       row.innerHTML = `
         <div class="swatch" style="background:${SOLV_COLORS[s]}"></div>
         <div class="cname">${state.solvNames[s]}</div>
-        <input type="number" min="0" step="10" value="${state.condWash[s]}" data-solv="${s}" inputmode="numeric">
+        <input type="text" value="${state.condWash[s]}" data-solv="${s}" inputmode="numeric">
         <div class="u">mL</div>
       `;
       const inp = row.querySelector('input');
@@ -960,9 +960,9 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
         solvRowsHtml += `
           <div class="seg-solv-row">
             <div class="ssr-lbl"><span class="sw" style="background:${SOLV_COLORS[s]}"></span>%${s}${readonly?' <span style="font-weight:400;color:var(--text-faint);font-size:10px;">(auto)</span>':''}</div>
-            <input type="number" step="1" min="0" max="100" value="${seg[s+'0']}" data-idx="${idx}" data-f="${s}0" title="awal segmen" inputmode="numeric" ${readonly?'readonly tabindex="-1"':''}>
+            <input type="text" value="${seg[s+'0']}" data-idx="${idx}" data-f="${s}0" title="awal segmen" inputmode="numeric" ${readonly?'readonly tabindex="-1"':''}>
             <span class="ssr-arrow">→</span>
-            <input type="number" step="1" min="0" max="100" value="${seg[s+'1']}" data-idx="${idx}" data-f="${s}1" title="akhir segmen" inputmode="numeric" ${readonly?'readonly tabindex="-1"':''}>
+            <input type="text" value="${seg[s+'1']}" data-idx="${idx}" data-f="${s}1" title="akhir segmen" inputmode="numeric" ${readonly?'readonly tabindex="-1"':''}>
           </div>`;
       });
 
@@ -970,8 +970,8 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
       card.innerHTML = `
         <div class="seg-card-head"><span class="seg-idx">SEGMEN ${idx+1}</span></div>
         <div class="seg-time-row">
-          <div class="stf"><label>Dari (min)${fromReadonly?' <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);">(auto)</span>':''}</label><input type="number" step="0.1" value="${seg.from}" data-idx="${idx}" data-f="from" inputmode="decimal" ${fromReadonly?'readonly tabindex="-1"':''}></div>
-          <div class="stf"><label>Ke (min)</label><input type="number" step="0.1" value="${seg.to}" data-idx="${idx}" data-f="to" inputmode="decimal"></div>
+          <div class="stf"><label>Dari (min)${fromReadonly?' <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);">(auto)</span>':''}</label><input type="text" value="${seg.from}" data-idx="${idx}" data-f="from" inputmode="decimal" ${fromReadonly?'readonly tabindex="-1"':''}></div>
+          <div class="stf"><label>Ke (min)</label><input type="text" value="${seg.to}" data-idx="${idx}" data-f="to" inputmode="decimal"></div>
         </div>
         <div class="seg-solv-grid">${solvRowsHtml}</div>
         <div class="seg-card-foot"><button class="seg-del" data-idx="${idx}">✕ Hapus Segmen</button></div>
@@ -1423,7 +1423,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
           nameInp.addEventListener('blur', e=>{ e.target.style.borderColor='var(--line)'; });
 
           const pctInp = document.createElement('input');
-          pctInp.type = 'number'; pctInp.min=0; pctInp.max=100; pctInp.step=0.1;
+          pctInp.type = 'text';
           pctInp.value = ingr.pct; pctInp.inputMode='decimal';
           pctInp.dataset.s = s; pctInp.dataset.idx = String(idx); pctInp.dataset.field = 'pct';
           pctInp.style.cssText = 'background:var(--panel-2);border:1.5px solid var(--line);padding:10px 6px;border-radius:6px;font-family:var(--mono);font-size:16px;color:var(--text);outline:none;text-align:center;width:100%;min-width:0;min-height:42px;';
@@ -1593,7 +1593,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
           <div class="mstat"><div class="lbl">Solvent Aktif</div><div class="val">${entry.list.join(', ')}</div></div>
         </div>
         <div class="mcard-foot">
-          <div class="qty-wrap">Ulangi <input type="number" class="qty" min="1" value="${entry.batchesPerDay}" data-id="${entry.id}" inputmode="numeric"> × (hari/batch)</div>
+          <div class="qty-wrap">Ulangi <input type="text" class="qty" value="${entry.batchesPerDay}" data-id="${entry.id}" inputmode="numeric"> × (hari/batch)</div>
           <button class="btn danger small" data-del="${entry.id}">Hapus</button>
         </div>
       `;
