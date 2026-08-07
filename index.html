@@ -814,7 +814,7 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
     }
     return null;
   }
-  function withFocusPreserved(el, renderFn){
+  function withFocusPreserved(el, renderFn, rawValue){
     const container = el.closest('[id]');
     const containerId = container ? container.id : null;
     const selector = selectorForInput(el);
@@ -825,6 +825,14 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
       const scope = containerId ? document.getElementById(containerId) : document;
       const again = scope ? scope.querySelector(selector) : null;
       if (again){
+        // The re-render just wrote the *coerced* state value (e.g. "" -> 0) into
+        // this input. While the person is still actively typing we want the box
+        // to show exactly what they typed instead — otherwise an emptied field
+        // snaps back to "0" with the cursor left in front of it, so the next
+        // digit gets inserted before the 0 (typing "15" becomes "150"). We only
+        // overwrite the coerced value for display; the underlying `state` still
+        // holds the real parsed number for calculations.
+        if (rawValue !== undefined) again.value = rawValue;
         again.focus();
         if (selStart !== null){
           try { again.setSelectionRange(selStart, selEnd); } catch(err){ /* ignore */ }
@@ -984,9 +992,15 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
         const idx = parseInt(e.target.dataset.idx);
         const f = e.target.dataset.f;
         const target = e.target;
+        const rawValue = e.target.value;
         state.segments[idx][f] = parseFloat(e.target.value)||0;
         if (!aIsEditable && list.includes('A')) deriveSegmentA(state.segments[idx], list);
-        withFocusPreserved(target, ()=>{ renderGradTable(); renderAll(); });
+        withFocusPreserved(target, ()=>{ renderGradTable(); renderAll(); }, rawValue);
+      });
+      inp.addEventListener('blur', e=>{
+        const idx = parseInt(e.target.dataset.idx);
+        const f = e.target.dataset.f;
+        e.target.value = state.segments[idx][f];
       });
     });
     wrap.querySelectorAll('.seg-del').forEach(btn=>{
@@ -1429,11 +1443,12 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
           pctInp.style.cssText = 'background:var(--panel-2);border:1.5px solid var(--line);padding:10px 6px;border-radius:6px;font-family:var(--mono);font-size:16px;color:var(--text);outline:none;text-align:center;width:100%;min-width:0;min-height:42px;';
           pctInp.addEventListener('input', e=>{
             const target = e.target;
+            const rawValue = e.target.value;
             ingr.pct=parseFloat(e.target.value)||0;
-            withFocusPreserved(target, ()=>{ renderCompBlocks(); });
+            withFocusPreserved(target, ()=>{ renderCompBlocks(); }, rawValue);
           });
           pctInp.addEventListener('focus', e=>{ e.target.style.borderColor='var(--solv-a)'; });
-          pctInp.addEventListener('blur', e=>{ e.target.style.borderColor='var(--line)'; });
+          pctInp.addEventListener('blur', e=>{ e.target.style.borderColor='var(--line)'; e.target.value = ingr.pct; });
 
           const volEl = document.createElement('div');
           volEl.style.cssText = 'font-family:var(--mono);font-size:13px;font-weight:700;text-align:right;color:var(--text);white-space:nowrap;';
@@ -1604,11 +1619,17 @@ footer.app-footer{ margin-top: 36px; padding-top: 16px; border-top: 1px solid va
       inp.addEventListener('input', e=>{
         const id = e.target.dataset.id;
         const target = e.target;
+        const rawValue = e.target.value;
         const entry = batch.find(b=>String(b.id)===String(id));
         if (entry){
           entry.batchesPerDay = parseInt(e.target.value)||1;
-          withFocusPreserved(target, ()=>{ renderBatchList(); });
+          withFocusPreserved(target, ()=>{ renderBatchList(); }, rawValue);
         }
+      });
+      inp.addEventListener('blur', e=>{
+        const id = e.target.dataset.id;
+        const entry = batch.find(b=>String(b.id)===String(id));
+        if (entry) e.target.value = entry.batchesPerDay;
       });
     });
     wrap.querySelectorAll('[data-del]').forEach(btn=>{
